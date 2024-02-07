@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package item;
+
+message Item {
+  string key =  1;
+  string value =  2;
+}
+
+service ItemService {
+  rpc PushItem(Item) returns (Item);
+  rpc PullItem(google.protobuf.Empty) returns (Item);
+}

@@ -13,7 +13,7 @@ class Item:
     def __eq__(self, other):
         return self.key == other.key and \
                 self.value == other.value
-    
+
 
 class Server:
 
@@ -21,6 +21,7 @@ class Server:
 
     def __init__(self, ip, port) -> None:
         self.queue: list[Item] = list()
+        self.queue_lock : threading.Lock = threading.Lock()
         self.worker_list_lock: threading.Lock = threading.Lock()
         self.worker_list: list[Server] = list()
         self.ip = ip
@@ -32,16 +33,21 @@ class Server:
     def push(self, item: Item) -> Item:
         if not self.is_master : 
             return item
+        self.queue_lock.acquire()
         self.queue.append(Item)
         self.synchronizer.sync(server = self, workers = self.worker_list)
+        self.queue_lock.release()
     
 
     def pull(self) -> Item:
-        if not self.is_master : 
-            return 
+        self.queue_lock.acquire()
         item = self.queue.pop()
         self.synchronizer.sync(server = self, workers = self.worker_list)
+        self.queue_lock.release()
         return item
+    
+    def runner(self) :
+        pass 
 
 
     def broadcast_message(self, item: Item) -> bool:
