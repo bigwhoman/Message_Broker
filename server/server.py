@@ -1,8 +1,9 @@
 from datetime import datetime
 import threading
-
+import item_service_pb2
+import item_service_pb2_grpc
 import yaml
-from watchdog.observers import Observer
+# from watchdog.observers import Observer
 
 class Item:
     def __init__(self, key, value) -> None:
@@ -46,7 +47,7 @@ class Server:
         self.queue_lock.release()
         return item
     
-    def runner(self) :
+    def run(self) :
         pass 
 
 
@@ -101,8 +102,9 @@ class ConfigLoader:
                 print(f'Error reading file: {e}')
 
 
-    def run(self) -> None:        
-        observer = Observer()
-        observer.schedule(self.propagate_config, self.config_file_path, recursive=False)
-        observer.start()
-        observer.join()
+    def run(self) -> None:
+        ...   
+        # observer = Observer()
+        # observer.schedule(self.propagate_config, self.config_file_path, recursive=False)
+        # observer.start()
+        # observer.join()
