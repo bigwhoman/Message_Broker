@@ -10,10 +10,40 @@ push:key:value
 pull -> key:value
 """
 
+class WorkerSocket:
+    def __init__(self, s: socket.socket) -> None:
+        self.__s = s
+        self.__lock = threading.Lock()
+    
+    def push(self, key: str, value: str):
+        # Push is lock free
+        self.__s.sendall(f"push:{key}:{value}".encode("utf-8"))
+
+    def prepare_pull(self):
+        # Just get the lock
+        self.__lock.acquire()
+
+    def pull(self):
+        try:
+            self.__s.sendall(b"pull")
+            packet = self.__s.recv(2048)
+            if not packet:
+                raise Exception("socket closed")
+            data = packet.decode("utf-8").strip().split(":")
+            if len(data) == 2:
+                (key, value) = data
+                return key, value
+        except:
+            # Socket closed, close the socket and 
+            self.__s.close()
+            return None
+        finally:
+            self.__lock.release()
+
+
 class QueueItem:
     def __init__(self) -> None:
         self.lock = threading.Lock()
-        self.read_lock = threading.Lock()
         self.node_ids: list[list[str]] = [] # list of (conn_id, conn_id)
     
     def to_simple(self) -> list[list[str]]:
@@ -26,6 +56,8 @@ class QueueLoadBalancer:
 
     def __init__(self) -> None:
         self.key_to_nodes: dict[str, QueueItem] = dict()
+        # This condvar is only used when we want to notify pull clients that we have added something to keys
+        self.added_condvar = threading.Condition()
         """
         l = []
         push(1,2) -> l = l.append(10)
@@ -34,72 +66,62 @@ class QueueLoadBalancer:
                     1: [([54, 2], [2, 44], [1, 34])]
         }
         """
-        #self.worker_connections_lock = threading.Lock()
-        self.worker_connections: dict[str, socket.socket] = dict() # worket_id -> connection
+        self.worker_connections: dict[str, WorkerSocket] = dict() # worket_id -> connection
     
     def push(self, key: str, value: bytes):        
+        # Check if there is any worker at all
         if len(self.worker_connections) == 0: 
             return
-        if not key in self.key_to_nodes:
-            self.key_to_nodes[key] = QueueItem()
-        self.key_to_nodes[key].lock.acquire()
+        # Create a new queue in keys if it does not exists
+        # We get the added_condvar lock but dont use it as condvar
+        with self.added_condvar:
+            if not key in self.key_to_nodes:
+                self.key_to_nodes[key] = QueueItem()
+        queueItem = self.key_to_nodes[key]
+        # Select two workers to push this key in them
         worker_ids = list(self.worker_connections.keys())
         the_chosen_ones = []        
         try:
-            the_chosen_ones = random.sample(worker_ids, 2)
+            the_chosen_ones = sorted(random.sample(worker_ids, 2))
         except ValueError:
             the_chosen_ones = worker_ids[0]
         print(f"Pushing {key}:{value} To Workers = {the_chosen_ones}")
-        for worker_id in the_chosen_ones:
-            #self.worker_connections_lock.acquire()
-            conn = self.worker_connections[worker_id]
-            #self.worker_connections_lock.release()
-            conn.sendall(f"push:{key}:{value}".encode("utf-8"))
-            print(f"Sent {key}:{value} to {worker_id}")
-        self.key_to_nodes[key].node_ids.append(the_chosen_ones)
-        print(self.key_to_nodes[key].node_ids)
-        self.key_to_nodes[key].lock.release()
+        with queueItem.lock: # Hold the lock. This makes the sending in client synchronous
+            for worker_id in the_chosen_ones:
+                self.worker_connections[worker_id].push(key, value)
+                print(f"Sent {key}:{value} to {worker_id}")
+            queueItem.node_ids.append(the_chosen_ones)
+            print(queueItem.node_ids)
+        # Notify if needed
+        with self.added_condvar:
+            self.added_condvar.notify()
         
 
-    def pull(self):
-        key = next(filter(lambda queue: len(self.key_to_nodes[queue].node_ids) != 0 , self.key_to_nodes.keys()))
-        if not key:
-            return None, None
-        print(f"Pulling {key}")
-        self.key_to_nodes[key].read_lock.acquire()
-        self.key_to_nodes[key].lock.acquire()
-        node_ids = self.key_to_nodes[key].node_ids.pop(0)
-        print(f"Pulling {key} from {node_ids}")
-        self.key_to_nodes[key].lock.release()
-        conn_list: list[socket.socket] = []
-        for node in node_ids:
-            #self.worker_connections_lock.acquire()
-            conn = self.worker_connections[node]
-            #self.worker_connections_lock.release()
-            conn.sendall(f"pull".encode("utf-8"))            
-            conn_list.append(conn)
-
-        def read_response(conn: socket.socket):
+    def pull(self) -> tuple[str, str]:
+        # Atomically get the next item to pull
+        with self.added_condvar:
             while True:
-                packet = conn.recv(2048)
-                if not packet: return None
-                data = packet.decode("utf-8").strip().split(":")
-                if len(data) == 2:
-                    return data
-                elif len(data) == 1 and data[0].strip() == "ack":
-                    pass
-                else:
-                    return None
-             
-        r_key = r_value = None
-        for c in conn_list:
-            response = read_response(c)
-            print(f"Response {response} from {c}")
-            if response:
-                (r_key, r_value) = response
-        print(f"Response: {r_key}:{r_value}")        
-        self.key_to_nodes[key].read_lock.release()        
-        return r_key, r_value
+                for key, queue in self.key_to_nodes.items():
+                    with queue.lock:
+                        if len(queue.node_ids) != 0:
+                            node_ids = queue.node_ids.pop(0)
+                            for node in node_ids:
+                                self.worker_connections[node].prepare_pull()
+                            break
+                if node_ids:
+                    break
+                self.added_condvar.wait() # wait until someone add a new key to our queue
+        print(f"Pulling {key} from {node_ids}")
+        # Pull from workers
+        results: list[tuple[str, str]] = []
+        for node in node_ids:
+            result = self.worker_connections[node].pull()
+            if result:
+                results.append(result)
+            else:
+                del self.worker_connections[node]
+        return results[0]
+        
     
 
     def ping_other(self):
@@ -180,7 +202,5 @@ class WorkerConnectionHandler:
         data = conn.recv(2048)
         worker_id = data.decode("utf-8").strip()
         print(f"Worker {worker_id} joined")
-        #self.server.worker_connections_lock.acquire()
-        self.server.worker_connections[worker_id] = conn
-        #self.server.worker_connections_lock.release()
+        self.server.worker_connections[worker_id] = WorkerSocket(conn)
 
