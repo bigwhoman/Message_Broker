@@ -37,34 +37,37 @@ class QueueLoadBalancer:
         """
         self.worker_connections_lock = threading.Lock()
         self.worker_connections: dict[str, socket.socket] = dict() # worket_id -> connection
-        self.t
     
-    def push(self, key: str, value: bytes):
+    def push(self, key: str, value: bytes):        
         if len(self.worker_connections) == 0: 
             return
         if not key in self.key_to_nodes:
             self.key_to_nodes[key] = QueueItem()
         self.key_to_nodes[key].lock.acquire()
         worker_ids = list(self.worker_connections.keys())
-        the_chosen_ones = []
+        the_chosen_ones = []        
         try:
             the_chosen_ones = random.sample(worker_ids, 2)
         except ValueError:
             the_chosen_ones = worker_ids[0]
+        print(f"Pushing {key}:{value} To Workers = {the_chosen_ones}")
         for worker_id in the_chosen_ones:
             self.worker_connections_lock.acquire()
             conn = self.worker_connections[worker_id]
             self.worker_connections_lock.release()
             conn.sendall(f"push:{key}:{value}".encode("utf-8"))
+            print("Sent {key}:{value} to {worker_id}")
+        self.key_to_nodes[key].node_ids.append(the_chosen_ones)
         self.key_to_nodes[key].lock.release()
         
 
     def pull(self):
         key = list(self.key_to_nodes.keys())[0]
+        print(f"Pulling {key}")
         self.key_to_nodes[key].read_lock.acquire()
-
         self.key_to_nodes[key].lock.acquire()
         node_ids = self.key_to_nodes[key].node_ids.pop()
+        print(f"Pulling {key} from {node_ids}")
         self.key_to_nodes[key].lock.release()
         conn_list: list[socket.socket] = []
         for node in node_ids:
@@ -74,11 +77,11 @@ class QueueLoadBalancer:
             conn.sendall(f"pull".encode("utf-8"))            
             conn_list.append(conn)
 
-        def read_response(conn):
+        def read_response(conn: socket.socket):
             while True:
                 packet = conn.recv(2048)
                 if not packet: return None
-                data = data.decode("utf-8").strip().split(":")
+                data = packet.decode("utf-8").strip().split(":")
                 if len(data) == 2:
                     return data
                 elif len(data) == 1 and data[0].strip() == "ack":
@@ -86,13 +89,15 @@ class QueueLoadBalancer:
                 else:
                     return None
              
-        key = value = None
+        r_key = r_value = None
         for c in conn_list:
             response = read_response(c)
+            print(f"Response {response} from {c}")
             if response:
-                key, value = response
+                (r_key, r_value) = response
+        print(f"Response: {r_key}:{r_value}")
         self.key_to_nodes[key].read_lock.release()
-        return key, value
+        return r_key, r_value
     
 
     def ping_other(self):
@@ -122,6 +127,7 @@ class QueueLoadBalancer:
                     self.push(key, value)
                 elif packet.startswith("pull"):
                     (key, value) = self.pull()
+                    conn.sendall(f'{key}:{value}'.encode("utf-8"))
                     print(f"pulled {key}:{value}")
                 else:
                     print(f"Unknown packet: {packet}")
@@ -142,6 +148,7 @@ class WorkerConnectionHandler:
     def handle(self, conn: socket.socket):
         data = conn.recv(2048)
         worker_id = data.decode("utf-8").strip()
+        print(f"Worker {worker_id} joined")
         self.server.worker_connections_lock.acquire()
         self.server.worker_connections[worker_id] = conn
         self.server.worker_connections_lock.release()
@@ -149,6 +156,6 @@ class WorkerConnectionHandler:
 if __name__ == "__main__":
     queue_lb = QueueLoadBalancer()
     wch = WorkerConnectionHandler(queue_lb)
-    wch_thread = threading.threading(target=wch.run)
+    wch_thread = threading.Thread(target=wch.run)
     wch_thread.start()
     queue_lb.run()

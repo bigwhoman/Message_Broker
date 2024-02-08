@@ -1,5 +1,6 @@
 import socket
 import os
+import uuid
 
 LOAD_BALANCER_HOST = os.getenv("LOAD_BALANCER_HOST", "localhost")
 LOAD_BALANCER_PORT = os.getenv("LOAD_BALANCER_PORT", "12345")
@@ -22,6 +23,9 @@ class BalancerConnectionHandler:
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((LOAD_BALANCER_HOST, int(LOAD_BALANCER_PORT)))
+            worker_id = str(uuid.uuid4())
+            print("We are worker", worker_id)
+            s.sendall(worker_id.encode("utf-8"))
             while True:
                 packet = s.recv(2048)
                 if not packet:
@@ -32,7 +36,7 @@ class BalancerConnectionHandler:
                     (_, key, value) = packet.split(":")
                     print(f"pushing {key}:{value}")
                     self.queue.push(key, value)
-                    s.sendall(b"ok")
+                    s.sendall(b"ack")
                 elif packet.startswith("pull"):
                     (key, value) = self.queue.pull()
                     print(f"pulled {key}:{value}")
