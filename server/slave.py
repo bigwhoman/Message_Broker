@@ -2,17 +2,21 @@ import socket
 import os
 import uuid
 import time
+from prometheus_client import Counter, start_http_server
+
 
 LOAD_BALANCER_PRIMARY_HOST = os.getenv("LOAD_BALANCER_PRIMARY_HOST", "localhost")
 LOAD_BALANCER_PRIMARY_PORT = int(os.getenv("LOAD_BALANCER_PRIMARY_PORT", "12345"))
 LOAD_BALANCER_BACKUP_HOST = os.getenv("LOAD_BALANCER_BACKUP_HOST", "localhost")
 LOAD_BALANCER_BACKUP_PORT = int(os.getenv("LOAD_BALANCER_BACKUP_PORT", "12347"))
 
+PUSH_REQUEST = Counter('push_request_counter', 'worker pushes', ["worker_id"])
+
 class QueueManager:
     def __init__(self):
         self.queue: list[tuple[str, str]] = []
     
-    def push(self, key: str, value: str):
+    def push(self, key: str, value: str):        
         self.queue.append((key, value))
 
     def pull(self) -> tuple[str, str]:
@@ -51,6 +55,7 @@ class BalancerConnectionHandler:
             if packet.startswith("push"):
                 (_, key, value) = packet.split(":")
                 print(f"pushing {key}:{value}")
+                PUSH_REQUEST.labels(f"{self.id}").inc()
                 self.queue.push(key, value)
             elif packet.startswith("pull"):
                 (key, value) = self.queue.pull()
@@ -64,5 +69,6 @@ class BalancerConnectionHandler:
                 
 
 if __name__ == "__main__":
+    start_http_server(port=9090, addr="0.0.0.0")
     server = BalancerConnectionHandler(QueueManager(), str(uuid.uuid4()))
     server.run()

@@ -4,12 +4,13 @@ import random
 import time
 import util
 import copy
-
+from prometheus_client import Counter
 """
 push:key:value
 pull -> key:value
 """
 
+PUSH_REQUEST = Counter('push_request_counter', 'all pushes', )
 class QueueItem:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -31,7 +32,7 @@ class QueueLoadBalancer:
         push(1,2) -> l = l.append(10)
         lock(l)
         l = {
-                    1: [([54, 2], [2, 44], [1, 34])]
+            1: [([54, 2], [2, 44], [1, 34])]
         }
         """
         #self.worker_connections_lock = threading.Lock()
@@ -51,6 +52,7 @@ class QueueLoadBalancer:
             the_chosen_ones = worker_ids[0]
         print(f"Pushing {key}:{value} To Workers = {the_chosen_ones}")
         for worker_id in the_chosen_ones:
+            PUSH_REQUEST.inc()
             #self.worker_connections_lock.acquire()
             conn = self.worker_connections[worker_id]
             #self.worker_connections_lock.release()
