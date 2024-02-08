@@ -101,6 +101,7 @@ class QueueLoadBalancer:
         # Atomically get the next item to pull
         with self.added_condvar:
             while True:
+                node_ids = None
                 for key, queue in self.key_to_nodes.items():
                     with queue.lock:
                         if len(queue.node_ids) != 0:

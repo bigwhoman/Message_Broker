@@ -16,7 +16,9 @@ if __name__ == "__main__":
     queue_lb = load_balancer.QueueLoadBalancer()
     wch = load_balancer.WorkerConnectionHandler(queue_lb)
     wch_thread = threading.Thread(target=wch.run, args=(WORKER_LISTEN, WORKER_PORT))
+    wch_thread.daemon = True
     secondary_thread = threading.Thread(target=queue_lb.listen_for_backup, args=(SECONDARY_MASTER_LISTEN, SECONDARY_MASTER_PORT))
+    secondary_thread.daemon = True
     wch_thread.start()
     secondary_thread.start()
     queue_lb.run(host=CLIENT_LISTEN, port=CLIENT_PORT)
