@@ -32,7 +32,7 @@ class Server:
         
 
     def push(self, item: Item) -> Item:
-        if not self.is_master : 
+        if not self.is_master:
             return item
         self.queue_lock.acquire()
         self.queue.append(Item)
@@ -41,6 +41,8 @@ class Server:
     
 
     def pull(self) -> Item:
+        if not self.is_master:
+            return item
         self.queue_lock.acquire()
         item = self.queue.pop()
         self.synchronizer.sync(server = self, workers = self.worker_list)
