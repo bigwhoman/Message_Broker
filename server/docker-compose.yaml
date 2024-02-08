@@ -1,0 +1,63 @@
+version: "3"
+
+networks:
+  backend:
+
+services:
+  primary-lb:
+    build:
+     context: .
+     dockerfile: Dockerfile.server
+    networks:
+    - backend
+    environment:
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "12345"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  secondary-lb:
+    build:
+     context: .
+     dockerfile: Dockerfile.server
+    networks:
+      - backend
+    depends_on:
+      primary-lb:
+        condition: service_healthy
+    environment:
+
+  slave-1:
+    build:
+     context: .
+     dockerfile: Dockerfile.slave
+    networks:
+      - backend
+    depends_on:
+      primary-lb:
+        condition: service_healthy
+    environment:
+
+  slave-2:
+    build:
+     context: .
+     dockerfile: Dockerfile.slave
+    networks:
+      - backend
+    depends_on:
+      primary-lb:
+        condition: service_healthy
+    environment:
+
+  slave-3:
+    build:
+     context: .
+     dockerfile: Dockerfile.slave
+    networks:
+      - backend
+    depends_on:
+      primary-lb:
+        condition: service_healthy
+    environment:
+      
