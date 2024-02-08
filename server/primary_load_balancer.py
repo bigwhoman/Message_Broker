@@ -2,14 +2,14 @@ import load_balancer
 import threading
 import os
 
-WORKER_LISTEN = os.getenv("LOADBALANCER_WORKER_HOST", "localhost")
-WORKER_PORT = int(os.getenv("LOADBALANCER_WORKER_PORT", "12345"))
+WORKER_LISTEN = os.getenv("WORKER_LISTEN", "localhost")
+WORKER_PORT = int(os.getenv("WORKER_PORT", "12345"))
 
-CLIENT_LISTEN = os.getenv("LOADBALANCER_HOST", "localhost")
-CLIENT_PORT = int(os.getenv("LOADBALANCER_PORT", "12346"))
+CLIENT_LISTEN = os.getenv("CLIENT_LISTEN", "localhost")
+CLIENT_PORT = int(os.getenv("CLIENT_PORT", "12346"))
 
-SECONDARY_MASTER_LISTEN = os.getenv("SECONDARY_HOST", "localhost")
-SECONDARY_MASTER_PORT = int(os.getenv("SECONDARY_PORT", "51234"))
+SECONDARY_MASTER_LISTEN = os.getenv("SECONDARY_MASTER_LISTEN", "localhost")
+SECONDARY_MASTER_PORT = int(os.getenv("SECONDARY_MASTER_PORT", "51234"))
 
 
 if __name__ == "__main__":

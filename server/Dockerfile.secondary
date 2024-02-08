@@ -1,0 +1,11 @@
+FROM python:3.10-alpine
+
+WORKDIR /app
+
+ADD load_balancer.py .
+ADD util.py .
+ADD secondary_load_balancer.py .
+
+ENTRYPOINT ["python"]
+
+CMD ["-u", "./secondary_load_balancer.py"]

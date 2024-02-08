@@ -3,8 +3,8 @@ import os
 import uuid
 import time
 
-LOAD_BALANCER_HOST = os.getenv("LOAD_BALANCER_HOST", "localhost")
-LOAD_BALANCER_PORT = int(os.getenv("LOAD_BALANCER_PORT", "12345"))
+LOAD_BALANCER_PRIMARY_HOST = os.getenv("LOAD_BALANCER_PRIMARY_HOST", "localhost")
+LOAD_BALANCER_PRIMARY_PORT = int(os.getenv("LOAD_BALANCER_PRIMARY_PORT", "12345"))
 LOAD_BALANCER_BACKUP_HOST = os.getenv("LOAD_BALANCER_BACKUP_HOST", "localhost")
 LOAD_BALANCER_BACKUP_PORT = int(os.getenv("LOAD_BALANCER_BACKUP_PORT", "12347"))
 
@@ -29,7 +29,7 @@ class BalancerConnectionHandler:
         # At first, run in primary mode
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((LOAD_BALANCER_HOST, LOAD_BALANCER_PORT))
+                s.connect((LOAD_BALANCER_PRIMARY_HOST, LOAD_BALANCER_PRIMARY_PORT))
                 self.handle_master(s)
         except IOError:
             pass

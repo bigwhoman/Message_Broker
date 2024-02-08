@@ -5,30 +5,49 @@ networks:
 
 services:
   primary-lb:
+    container_name: primary-lb
     build:
      context: .
-     dockerfile: Dockerfile.server
+     dockerfile: Dockerfile.primary
     networks:
-    - backend
+      - backend
     environment:
+      WORKER_LISTEN: "0.0.0.0"
+      WORKER_PORT: "12345"
+      CLIENT_LISTEN: "0.0.0.0"
+      CLIENT_PORT: "8080"
+      SECONDARY_MASTER_LISTEN: "0.0.0.0"
+      SECONDARY_MASTER_PORT: "54321"
+    ports:
+      - "12345:8080"
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "12345"]
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 10s
       timeout: 5s
       retries: 3
 
   secondary-lb:
+    container_name: secondary-lb
     build:
      context: .
-     dockerfile: Dockerfile.server
+     dockerfile: Dockerfile.secondary
     networks:
       - backend
     depends_on:
       primary-lb:
         condition: service_healthy
     environment:
+      WORKER_LISTEN: "0.0.0.0"
+      WORKER_PORT: "12345"
+      CLIENT_LISTEN: "0.0.0.0"
+      CLIENT_PORT: "8080"
+      PRIMARY_HOST: "primary-lb"
+      PRIMARY_PORT: "54321"
+    ports:
+      - "12346:8080"
 
   slave-1:
+    container_name: slave-1
     build:
      context: .
      dockerfile: Dockerfile.slave
@@ -38,8 +57,13 @@ services:
       primary-lb:
         condition: service_healthy
     environment:
+      LOAD_BALANCER_PRIMARY_HOST: "primary-lb"
+      LOAD_BALANCER_PRIMARY_PORT: "12345"
+      LOAD_BALANCER_BACKUP_HOST: "secondary-lb"
+      LOAD_BALANCER_BACKUP_PORT: "12345"
 
   slave-2:
+    container_name: slave-2
     build:
      context: .
      dockerfile: Dockerfile.slave
@@ -49,8 +73,13 @@ services:
       primary-lb:
         condition: service_healthy
     environment:
+      LOAD_BALANCER_PRIMARY_HOST: "primary-lb"
+      LOAD_BALANCER_PRIMARY_PORT: "12345"
+      LOAD_BALANCER_BACKUP_HOST: "secondary-lb"
+      LOAD_BALANCER_BACKUP_PORT: "12345"
 
   slave-3:
+    container_name: slave-3
     build:
      context: .
      dockerfile: Dockerfile.slave
@@ -60,4 +89,8 @@ services:
       primary-lb:
         condition: service_healthy
     environment:
+      LOAD_BALANCER_PRIMARY_HOST: "primary-lb"
+      LOAD_BALANCER_PRIMARY_PORT: "12345"
+      LOAD_BALANCER_BACKUP_HOST: "secondary-lb"
+      LOAD_BALANCER_BACKUP_PORT: "12345"
       

@@ -1,4 +1,4 @@
-FROM python:3.9
+FROM python:3.10-alpine
 
 WORKDIR /app
 
@@ -6,4 +6,4 @@ ADD slave.py .
 
 ENTRYPOINT ["python"]
 
-CMD ["./slave.py"]
+CMD ["-u", "./slave.py"]
