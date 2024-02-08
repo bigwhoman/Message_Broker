@@ -1,0 +1,9 @@
+FROM python:3.9
+
+WORKDIR /app
+
+ADD slave.py .
+
+ENTRYPOINT ["python"]
+
+CMD ["./slave.py"]

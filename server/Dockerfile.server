@@ -1,0 +1,9 @@
+FROM python:3.9
+
+WORKDIR /app
+
+ADD load_balancer.py .
+
+ENTRYPOINT ["python"]
+
+CMD ["./load_balancer.py"]
