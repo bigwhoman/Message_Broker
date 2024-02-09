@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint:
-    runs-on: macos
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: ["3.9"]
@@ -28,7 +28,7 @@ jobs:
         pylint server/primary_load_balancer.py server/load_balancer.py server/secondary_load_balancer.py server/slave.py server/util.py
 
   build-primary:
-    runs-on: macos
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
@@ -45,7 +45,7 @@ jobs:
         docker push nimana/message-broker-primary:${{ steps.vars.outputs.sha_short }}
 
   build-secondary:
-    runs-on: macos
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
@@ -62,7 +62,7 @@ jobs:
         docker push nimana/message-broker-secondary:${{ steps.vars.outputs.sha_short }}
 
   build-slave:
-    runs-on: macos
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
