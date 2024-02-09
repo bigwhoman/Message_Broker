@@ -187,3 +187,9 @@ pyvenv.cfg
 pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv
+
+client/java/untitled/
+client/java/java/out/
+client/java/java/.idea/
+client/java/java/java.iml
+
