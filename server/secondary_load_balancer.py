@@ -18,6 +18,7 @@ if __name__ == "__main__":
     queue_lb = load_balancer.QueueLoadBalancer()
     wch = load_balancer.WorkerConnectionHandler(queue_lb)
     wch_thread = threading.Thread(target=wch.run, args=(WORKER_LISTEN, WORKER_PORT))
+    wch_thread.daemon = True
     sync_thread = threading.Thread(target=queue_lb.sync_from_primary, args=(PRIMARY_HOST, PRIMARY_PORT))
     sync_thread.start()
     sync_thread.join()
