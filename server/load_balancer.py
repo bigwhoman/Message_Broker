@@ -39,10 +39,13 @@ class WorkerSocket:
                 return key, value
         except:
             # Socket closed, close the socket and 
-            self.__s.close()
+            self.close()
             return None
         finally:
             self.__lock.release()
+    
+    def close(self):
+        self.__s.close()
 
 
 class QueueItem:
@@ -88,16 +91,20 @@ class QueueLoadBalancer:
         try:
             the_chosen_ones = sorted(random.sample(worker_ids, 2))
         except ValueError:
-            the_chosen_ones = worker_ids[0]
+            the_chosen_ones = [worker_ids[0]]
         print(f"Pushing {key}:{value} To Workers = {the_chosen_ones}")
 
         with queueItem.lock: # Hold the lock. This makes the sending in client synchronous
             for worker_id in the_chosen_ones:
-                self.worker_connections[worker_id].push(key, value)
-                PUSH_REQUEST.inc()
-                print(f"Sent {key}:{value} to {worker_id}")
+                try:
+                    self.worker_connections[worker_id].push(key, value)
+                    PUSH_REQUEST.inc()
+                    print(f"Sent {key}:{value} to {worker_id}")
+                except Exception:
+                    print(f"Removing connection {worker_id}")
+                    self.worker_connections[worker_id].close()
+                    del self.worker_connections[worker_id]
             queueItem.node_ids.append(the_chosen_ones)
-            print(queueItem.node_ids)
         # Notify if needed
         with self.added_condvar:
             self.added_condvar.notify()
@@ -114,7 +121,8 @@ class QueueLoadBalancer:
                         if len(queue.node_ids) != 0:
                             node_ids = queue.node_ids.pop(0)
                             for node in node_ids:
-                                self.worker_connections[node].prepare_pull()
+                                if node in self.worker_connections:
+                                    self.worker_connections[node].prepare_pull()
                             break
                 if node_ids:
                     break
@@ -123,11 +131,13 @@ class QueueLoadBalancer:
         # Pull from workers
         results: list[tuple[str, str]] = []
         for node in node_ids:
-            result = self.worker_connections[node].pull()
-            if result:
-                results.append(result)
-            else:
-                del self.worker_connections[node]
+            if node in self.worker_connections:
+                result = self.worker_connections[node].pull()
+                if result:
+                    results.append(result)
+                else:
+                    print(f"Removing connection {node}")
+                    del self.worker_connections[node]
         return results[0]
         
     
@@ -186,7 +196,7 @@ class QueueLoadBalancer:
             s.listen()
             backup_socket, _ = s.accept()
             while True:
-                time.sleep(1)
+                time.sleep(5)
                 # This is a bad way
                 to_serialize = {}
                 for (key, l) in self.key_to_nodes.items():
