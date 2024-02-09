@@ -25,9 +25,9 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint server/server.py server/load_balancer.py
+        pylint server/primary_load_balancer.py server/load_balancer.py server/secondary_load_balancer.py server/slave.py server/util.py
 
-  build-server:
+  build-primary:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -36,7 +36,30 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT    
     - name: Build Server
       run: |
-        docker build -t message-broker-master:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.server server/
+        docker build -t message-broker-primary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.primary server/
+    - name: Login Docker
+      run: |
+        docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
+    - name: Push
+      run: |
+        docker push message-broker-primary:${{ steps.vars.outputs.sha_short }}
+
+  build-secondary:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT    
+    - name: Build Server
+      run: |
+        docker build -t message-broker-secondary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.secondary server/
+    - name: Login Docker
+      run: |
+        docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
+    - name: Push
+      run: |
+        docker push message-broker-secondary:${{ steps.vars.outputs.sha_short }}
 
   build-slave:
     runs-on: ubuntu-latest
@@ -48,3 +71,10 @@ jobs:
     - name: Build Clinet
       run: |
         docker build -t message-broker-slave:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.slave server/
+    - name: Login Docker
+      run: |
+        docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
+    - name: Push
+      run: |
+        docker push message-broker-slave:${{ steps.vars.outputs.sha_short }}
+
