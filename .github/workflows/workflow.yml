@@ -36,13 +36,13 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT    
     - name: Build Server
       run: |
-        docker build -t nimana/message-broker-primary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.primary server/
+        docker build -t nimana/sad_project/message-broker-primary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.primary server/
     - name: Login Docker
       run: |        
         echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
-        docker push nimana/message-broker-primary:${{ steps.vars.outputs.sha_short }}
+        docker push nimana/sad_project/message-broker-primary:${{ steps.vars.outputs.sha_short }}
 
   build-secondary:
     runs-on: ubuntu-latest
@@ -53,13 +53,13 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT    
     - name: Build Server
       run: |
-        docker build -t nimana/message-broker-secondary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.secondary server/
+        docker build -t nimana/sad_project/message-broker-secondary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.secondary server/
     - name: Login Docker
       run: |
         echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
-        docker push nimana/message-broker-secondary:${{ steps.vars.outputs.sha_short }}
+        docker push nimana/sad_project/message-broker-secondary:${{ steps.vars.outputs.sha_short }}
 
   build-slave:
     runs-on: ubuntu-latest
@@ -70,11 +70,11 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: Build Clinet
       run: |
-        docker build -t nimana/message-broker-slave:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.slave server/
+        docker build -t nimana/sad_project/message-broker-slave:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.slave server/
     - name: Login Docker
       run: |
         echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
-        docker push nimana/message-broker-slave:${{ steps.vars.outputs.sha_short }}
+        docker push nimana/sad_project/message-broker-slave:${{ steps.vars.outputs.sha_short }}
 
