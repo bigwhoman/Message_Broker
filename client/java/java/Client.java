@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
@@ -36,15 +35,21 @@ public class Client {
                     System.out.println("Pushed " + key + ":" + val + " to server");
                     break;
                 case "2":
-                    String[] keyValue = pull();
-                    if (keyValue[0].isEmpty()) { // error while receiving response
+                    Optional<String[]> keyValue = pull();
+                    if (keyValue.isEmpty()) { // error while receiving response
                         break;
+                    } else {
+                        if (keyValue.get()[0].isEmpty()) {
+                            System.out.println("No key:value pairs available");
+                        } else {
+                            System.out.println("Got key:value pair -> " + keyValue.get()[0] + ":" + keyValue.get()[1]);
+                        }
                     }
-                    System.out.println("Got key:value pair -> " + keyValue[0] + ":" + keyValue[1]);
                     break;
                 case "3":
+                    System.out.println("[Subscription] started");
                     TwoStringArgOperator operator = (String k, String v) ->
-                            System.out.println("[Subscribed] got key:value pair -> " + k + " " + v);
+                            System.out.println("[Subscription] got key:value pair -> " + k + ":" + v);
                     new Thread(new Subscriber(this, operator)).start();
                     break;
                 case "4":
@@ -56,18 +61,21 @@ public class Client {
         }
     }
 
-    public String[] pull() {
+    public Optional<String[]> pull() {
         Optional<StringBuilder> response = sendRequest("pull", "");
         if (response.isPresent()) {
             try {
-                String[] keyValue = response.get().toString().split(":");
-                return keyValue;
+                String responseContent = response.get().toString();
+                if (responseContent.isEmpty())
+                    return Optional.of(new String[2]);
+                String[] keyValue = responseContent.split(":");
+                return Optional.of(keyValue);
             } catch (Exception e) {
                 System.out.println("Could not parse the response {" + response + "}:\n" + e.getMessage());
-                return new String[2];
+                return Optional.empty();
             }
         } else {
-            return new String[2];
+            return Optional.empty();
         }
     }
 
@@ -107,7 +115,7 @@ public class Client {
                 int charsIn = -1;
                 char[] buffer = new char[1024];
                 charsIn = in.read(buffer);
-                if (charsIn > 0) {
+                if (charsIn > -1) {
                     response.append(buffer, 0, charsIn);
                     return response;
                 }
@@ -134,9 +142,11 @@ class Subscriber implements Runnable {
     @Override
     public void run() {
         while (true) {
-            String[] keyValue = client.pull();
-            if (!keyValue[0].isEmpty()) {
-                operator.invoke(keyValue[0], keyValue[1]);
+            Optional<String[]> keyValue = client.pull();
+            if (keyValue.isPresent()) {
+                if (!keyValue.get()[0].isEmpty()) {
+                    operator.invoke(keyValue.get()[0], keyValue.get()[1]);
+                }
             }
         }
     }

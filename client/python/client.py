@@ -31,13 +31,18 @@ class Client:
                 key = input("Enter key: ")
                 val = input("Enter value: ")
                 self.push(key, val)
+                print(f"Pushed {key}:{val} to server")
             elif choice == "2":
                 key, val = self.pull()
-                print(f"Key: {key}, Value: {val}")
+                if key != None:
+                    print(f"Got key:value pair -> {key}:{val}")
+                else:
+                    print("No key:value pairs available")
             elif choice == "3":
+                print("[Subscription] started")
                 thread = Thread(
                             target=self.subscribe, 
-                            args=[lambda key, value: print("Subscribed to Queue: got key: ", key, " value: ", value)]
+                            args=[lambda key, value: print(f"[Subscription] got key:value pair -> {key}:{value}")]
                         )
                 thread.start()
             elif choice == "4":
@@ -74,14 +79,22 @@ class Client:
     
     def pull(self) -> tuple[str, str]:
         response = self.send_request("pull", "")
+        if response == '':
+            return None, None
         response_parts = response.split(":")
         return response_parts[0], response_parts[1]
     
     def subscribe(self, f):
         while True:
             response = self.send_request("pull", "")
-            response_parts = response.split(":")
-            f(response_parts[0], response_parts[1])
+            if response != '':
+                response_parts = response.split(":")
+                f(response_parts[0], response_parts[1])
+            ''' 
+               No else case is needed because this happens nearly always in out infinite loop.
+               Cases which there is an error with server are logged inside the send_request method. 
+            '''
+
     
 
 def main():
