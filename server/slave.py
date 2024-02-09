@@ -57,6 +57,7 @@ class BalancerConnectionHandler:
                 print(f"pushing {key}:{value}")
                 PUSH_REQUEST.labels(f"{self.id}").inc()
                 self.queue.push(key, value)
+                s.sendall(b"ack")
             elif packet.startswith("pull"):
                 (key, value) = self.queue.pull()
                 print(f"pulled {key}:{value}")

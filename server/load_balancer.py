@@ -17,8 +17,11 @@ class WorkerSocket:
         self.__lock = threading.Lock()
     
     def push(self, key: str, value: str):
-        # Push is lock free
-        self.__s.sendall(f"push:{key}:{value}".encode("utf-8"))
+        with self.__lock:
+            self.__s.sendall(f"push:{key}:{value}".encode("utf-8"))
+            read_buffer = self.__s.recv(4)
+            if read_buffer != b"ack":
+                raise Exception(f"HUGE FUCKUP: {read_buffer}")
 
     def prepare_pull(self):
         # Just get the lock
@@ -146,13 +149,14 @@ class QueueLoadBalancer:
             while True:
                 packet = conn.recv(2048)
                 if not packet:
-                    print(f"connection {conn.getpeername()} closed")
+                    #print(f"connection {conn.getpeername()} closed")
                     break
                 packet = packet.decode("utf-8").strip()
                 if packet.startswith("push"):
                     (_, key, value) = packet.split(":")
                     print(f"pushing {key}:{value}")
                     self.push(key, value)
+                    conn.sendall(b'ack')
                 elif packet.startswith("pull"):
                     (key, value) = self.pull()
                     conn.sendall(f'{key}:{value}'.encode("utf-8"))
