@@ -1,6 +1,7 @@
 import load_balancer
 import threading
 import os
+from prometheus_client import start_http_server
 
 WORKER_LISTEN = os.getenv("WORKER_LISTEN", "localhost")
 WORKER_PORT = int(os.getenv("WORKER_PORT", "12345"))
@@ -13,6 +14,7 @@ SECONDARY_MASTER_PORT = int(os.getenv("SECONDARY_MASTER_PORT", "51234"))
 
 
 if __name__ == "__main__":
+    start_http_server(port=9090, addr="0.0.0.0")
     queue_lb = load_balancer.QueueLoadBalancer()
     wch = load_balancer.WorkerConnectionHandler(queue_lb)
     wch_thread = threading.Thread(target=wch.run, args=(WORKER_LISTEN, WORKER_PORT))

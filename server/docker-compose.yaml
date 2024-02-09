@@ -20,6 +20,7 @@ services:
       SECONDARY_MASTER_PORT: "54321"
     ports:
       - "12345:8080"
+      - "12347:9090"
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 10s

@@ -4,11 +4,12 @@ import random
 import time
 import util
 import copy
-
+from prometheus_client import Counter
 """
 push:key:value
 pull -> key:value
 """
+PUSH_REQUEST = Counter('push_request_counter', 'all pushes', )
 
 class WorkerSocket:
     def __init__(self, s: socket.socket) -> None:
@@ -63,7 +64,7 @@ class QueueLoadBalancer:
         push(1,2) -> l = l.append(10)
         lock(l)
         l = {
-                    1: [([54, 2], [2, 44], [1, 34])]
+            1: [([54, 2], [2, 44], [1, 34])]
         }
         """
         self.worker_connections: dict[str, WorkerSocket] = dict() # worket_id -> connection
@@ -86,15 +87,18 @@ class QueueLoadBalancer:
         except ValueError:
             the_chosen_ones = worker_ids[0]
         print(f"Pushing {key}:{value} To Workers = {the_chosen_ones}")
+
         with queueItem.lock: # Hold the lock. This makes the sending in client synchronous
             for worker_id in the_chosen_ones:
                 self.worker_connections[worker_id].push(key, value)
+                PUSH_REQUEST.inc()
                 print(f"Sent {key}:{value} to {worker_id}")
             queueItem.node_ids.append(the_chosen_ones)
             print(queueItem.node_ids)
         # Notify if needed
         with self.added_condvar:
             self.added_condvar.notify()
+
         
 
     def pull(self) -> tuple[str, str]:
