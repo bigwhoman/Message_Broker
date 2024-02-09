@@ -38,8 +38,8 @@ jobs:
       run: |
         docker build -t message-broker-primary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.primary server/
     - name: Login Docker
-      run: |
-        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+      run: |        
+        echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
         docker push message-broker-primary:${{ steps.vars.outputs.sha_short }}
@@ -56,7 +56,7 @@ jobs:
         docker build -t message-broker-secondary:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.secondary server/
     - name: Login Docker
       run: |
-        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+        echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
         docker push message-broker-secondary:${{ steps.vars.outputs.sha_short }}
@@ -73,7 +73,7 @@ jobs:
         docker build -t message-broker-slave:${{ steps.vars.outputs.sha_short }} -f server/Dockerfile.slave server/
     - name: Login Docker
       run: |
-        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+        echo "${{ vars.DOCKERHUB_PASSWORD }}" | docker login --username ${{ vars.DOCKERHUB_USERNAME }} --password-stdin
     - name: Push
       run: |
         docker push message-broker-slave:${{ steps.vars.outputs.sha_short }}
