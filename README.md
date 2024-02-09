@@ -1,6 +1,7 @@
 # Message_Broker
 Message_Broker is a queueing system which consists of a load balancer module that further distibutes
-the incoming reuqests to the online worker nodes.
+the incoming reuqests to the online worker nodes. </br>
+ We have containerized our modules using docker and each of the nodes in the cluster or the load balancers can be deployed and ran independently and isolated.
 
 ## Clients
 We have two client programs, one of them written in python and the other written in java. They have the same functionalities. You can either:
@@ -41,3 +42,4 @@ In this system, we have two load balancers, a master and a back-up.
 
 ## Cluster
 
+## CICD
