@@ -96,30 +96,13 @@ jobs:
     - name: Deploy Primary
       run: |
         export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/primary-deploy.yaml | kubectl apply -f -
-
-  deploy-secondary:
-    runs-on: self-hosted
-    needs:
-    - deploy-primary
-    - build-secondary
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set outputs
-      id: vars
-      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-    - name: Set up Kubectl
-      uses: azure/k8s-set-context@v1
-      with:
-        kubeconfig: ${{ secrets.KUBECONFIG }}
-    - name: Deploy Secondary
-      run: |
-        export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/secondary-deploy.yaml | kubectl apply -f -
+        kubectl rollout status --watch --timeout=600s statefulset/primary-lb -n sadproject
 
   deploy-slave:
     runs-on: self-hosted
     needs:
     - build-slave
-    - deploy-secondary
+    - deploy-primary
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
@@ -132,3 +115,22 @@ jobs:
     - name: Deploy Slave
       run: |
         export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/slave-deploy.yaml | kubectl apply -f -
+        kubectl rollout status --watch --timeout=600s statefulset/slave -n sadproject
+
+  deploy-secondary:
+    runs-on: self-hosted
+    needs:
+    - deploy-slave
+    - build-secondary
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Set up Kubectl
+      uses: azure/k8s-set-context@v1
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }}
+    - name: Deploy Secondary
+      run: |
+        export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/secondary-deploy.yaml | kubectl apply -f -        
