@@ -78,7 +78,7 @@ jobs:
       run: |
         docker push nimana/message-broker-slave:${{ steps.vars.outputs.sha_short }}
 
-  deploy:
+  deploy-primary:
     runs-on: self-hosted
     needs:
     - build-slave
@@ -92,13 +92,43 @@ jobs:
     - name: Set up Kubectl
       uses: azure/k8s-set-context@v1
       with:
-        kubeconfig: ${{ secrets.KUBECONFIG }} 
+        kubeconfig: ${{ secrets.KUBECONFIG }}
     - name: Deploy Primary
       run: |
         export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/primary-deploy.yaml | kubectl apply -f -
+
+  deploy-secondary:
+    runs-on: self-hosted
+    needs:
+    - deploy-primary
+    - build-secondary
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Set up Kubectl
+      uses: azure/k8s-set-context@v1
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }}
     - name: Deploy Secondary
       run: |
         export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/secondary-deploy.yaml | kubectl apply -f -
+
+  deploy-slave:
+    runs-on: self-hosted
+    needs:
+    - build-slave
+    - deploy-secondary
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Set up Kubectl
+      uses: azure/k8s-set-context@v1
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }}
     - name: Deploy Slave
       run: |
         export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/slave-deploy.yaml | kubectl apply -f -
