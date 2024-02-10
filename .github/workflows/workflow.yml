@@ -80,6 +80,10 @@ jobs:
 
   deploy:
     runs-on: self-hosted
+    needs:
+    - build-slave
+    - build-secondary
+    - build-primary
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
