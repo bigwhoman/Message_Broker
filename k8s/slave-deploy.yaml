@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: slave
-        image: nimana/message-broker-slave:e02ce68
+        image: nimana/message-broker-slave:${IMAGE_TAG}
         env:
         - name: LOAD_BALANCER_PRIMARY_HOST
           value: "primary-lb"

@@ -78,3 +78,23 @@ jobs:
       run: |
         docker push nimana/message-broker-slave:${{ steps.vars.outputs.sha_short }}
 
+  deploy:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Set up Kubectl
+      uses: azure/k8s-set-context@v1
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }} 
+    - name: Deploy Primary
+      run: |
+        export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/primary-deploy.yaml | kubectl apply -f -
+    - name: Deploy Secondary
+      run: |
+        export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/secondary-deploy.yaml | kubectl apply -f -
+    - name: Deploy Slave
+      run: |
+        export IMAGE_TAG=${{ steps.vars.outputs.sha_short }} && envsubst < k8s/slave-deploy.yaml | kubectl apply -f -

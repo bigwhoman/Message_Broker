@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: primary-lb
-        image: nimana/message-broker-primary:e02ce68
+        image: nimana/message-broker-primary:${IMAGE_TAG}
         ports:
         - containerPort: 8080
           name: client
