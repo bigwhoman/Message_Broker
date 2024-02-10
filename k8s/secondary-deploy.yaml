@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: secondary-lb
+  namespace: sadproject
+spec:
+  selector:
+    matchLabels:
+      app: secondary-lb
+  serviceName: secondary-lb
+  replicas: 1
+  template:
+    metadata:
+      namespace: sadproject
+      labels:
+        app: secondary-lb
+    spec:
+      containers:
+      - name: secondary-lb
+        image: nimana/message-broker-secondary:e02ce68
+        ports:
+        - containerPort: 8080
+          name: client
+        - containerPort: 12345
+          name: worker
+        - containerPort: 54321
+          name: secondary
+        env:
+        - name: WORKER_LISTEN
+          value: "0.0.0.0"
+        - name: WORKER_PORT
+          value: "12345"
+        - name: CLIENT_LISTEN
+          value: "0.0.0.0"
+        - name: CLIENT_PORT
+          value: "8080"
+        - name: SECONDARY_HOST
+          value: "0.0.0.0"
+        - name: SECONDARY_PORT
+          value: "54321"
+        - name: PRIMARY_HOST
+          value: primary-lb
+        - name: PRIMARY_PORT
+          value: "54321"
+  volumeClaimTemplates: []
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: secondary-lb
+  namespace: sadproject
+spec:
+  selector:
+    app: secondary-lb
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: client
+  - port: 12345
+    targetPort: 12345
+    name: worker
+  - port: 54321
+    targetPort: 54321
+    name: slave
+  - port: 9090
+    targetPort: 9090
+    name: metrics    

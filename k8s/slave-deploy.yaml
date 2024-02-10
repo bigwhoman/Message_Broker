@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: slave
+  namespace: sadproject
+spec:
+  selector:
+    matchLabels:
+      app: slave
+  serviceName: slave
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: slave
+      namespace: sadproject
+    spec:
+      containers:
+      - name: slave
+        image: nimana/message-broker-slave:e02ce68
+        env:
+        - name: LOAD_BALANCER_PRIMARY_HOST
+          value: "primary-lb"
+        - name: LOAD_BALANCER_PRIMARY_PORT
+          value: "12345"
+        - name: LOAD_BALANCER_BACKUP_HOST
+          value: "secondary-lb"
+        - name: LOAD_BALANCER_BACKUP_PORT
+          value: "12345"
+  volumeClaimTemplates: []
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: slave
+  namespace: sadproject
+spec:
+  selector:
+    app: slave
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: metrics
