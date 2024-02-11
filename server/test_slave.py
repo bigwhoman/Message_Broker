@@ -9,8 +9,7 @@ def test_queue_manager():
     for data in items:
         queue.push(KEY, data)
     for data in items:
-        (key, value) = queue.pull()
-        assert key == KEY
+        value = queue.pull(KEY)
         assert value == data
 
 def test_queue_server():
@@ -29,10 +28,11 @@ def test_queue_server():
         # First packet must be the id
         assert slaveSocket.recv(1024).decode() == SLAVE_ID
         # Send a push request
-        TO_SEND_DATA = "key:value"
+        KEY = "key"
+        VALUE = "value"
         ACK = "ack"
-        slaveSocket.sendall(f"push:{TO_SEND_DATA}".encode())
+        slaveSocket.sendall(f"push:{KEY}:{VALUE}".encode())
         assert slaveSocket.recv(1024).decode() == ACK
         # Pull the result
-        slaveSocket.sendall(b"pull")
-        assert slaveSocket.recv(1024).decode() == TO_SEND_DATA
+        slaveSocket.sendall(f"pull:{KEY}".encode())
+        assert slaveSocket.recv(1024).decode() == f"{KEY}:{VALUE}"
