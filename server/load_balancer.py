@@ -27,9 +27,9 @@ class WorkerSocket:
         # Just get the lock
         self.__lock.acquire()
 
-    def pull(self):
+    def pull(self, key: str):
         try:
-            self.__s.sendall(b"pull")
+            self.__s.sendall(f"pull:{key}".encode())
             packet = self.__s.recv(2048)
             if not packet:
                 raise Exception("socket closed")
@@ -132,7 +132,7 @@ class QueueLoadBalancer:
         results: list[tuple[str, str]] = []
         for node in node_ids:
             if node in self.worker_connections:
-                result = self.worker_connections[node].pull()
+                result = self.worker_connections[node].pull(key)
                 if result:
                     results.append(result)
                 else:

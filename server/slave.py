@@ -14,13 +14,15 @@ PUSH_REQUEST = Counter('push_request_counter', 'worker pushes', ["worker_id"])
 
 class QueueManager:
     def __init__(self):
-        self.queue: list[tuple[str, str]] = []
+        self.queue: dict[str, list[str]] = {}
     
-    def push(self, key: str, value: str):        
-        self.queue.append((key, value))
+    def push(self, key: str, value: str):
+        if key not in self.queue:
+            self.queue[key] = []
+        self.queue[key].append(value)
 
-    def pull(self) -> tuple[str, str]:
-        return self.queue.pop(0)
+    def pull(self, key: str) -> str:
+        return self.queue[key].pop(0)
 
 class BalancerConnectionHandler:
 
@@ -59,7 +61,8 @@ class BalancerConnectionHandler:
                 self.queue.push(key, value)
                 s.sendall(b"ack")
             elif packet.startswith("pull"):
-                (key, value) = self.queue.pull()
+                (_, key) = packet.split(":")
+                value = self.queue.pull(key)
                 print(f"pulled {key}:{value}")
                 s.sendall(f"{key}:{value}".encode("utf-8"))
             elif packet == "ping":

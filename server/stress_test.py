@@ -6,7 +6,7 @@ import string
 PRIMARY_HOST = "192.168.56.6"
 PRIMARY_PORT = 12345
 CONNECTION_COUNT = 4 # How many connections we shall open?
-TOTAL_ACTIONS = 1_000 # How many actions each connection does?
+TOTAL_ACTIONS = 10_000 # How many actions each connection does?
 KEY_POOL = [str(i) for i in range(10)] # The keys we use to benchmark broker
 
 def random_key() -> str:
