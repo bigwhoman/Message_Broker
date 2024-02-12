@@ -26,6 +26,25 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint server/primary_load_balancer.py server/load_balancer.py server/secondary_load_balancer.py server/slave.py server/util.py
+  
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+    - name: Test    
+      run: |
+        pytest
 
   build-primary:
     runs-on: self-hosted
