@@ -49,6 +49,8 @@ jobs:
 
   build-primary:
     runs-on: self-hosted
+    needs:
+    - test
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
@@ -66,6 +68,8 @@ jobs:
 
   build-secondary:
     runs-on: self-hosted
+    needs:
+    - test
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
@@ -83,6 +87,8 @@ jobs:
 
   build-slave:
     runs-on: self-hosted
+    needs:
+    - test
     steps:
     - uses: actions/checkout@v3
     - name: Set outputs
