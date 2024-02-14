@@ -36,6 +36,12 @@ class Client:
             response = self.socket.recv(4)
             if response != b'ack':
                 print("Non ack response:", response)
+                self.socket.close()
+                # Retry next socket
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.connect((self.servers[1].ip, self.servers[1].port))
+                self.socket.sendall(f"{type}{data}".encode("utf-8"))
+                response = self.socket.recv(4)
             assert response == b'ack'
         else:
             response = self.socket.recv(2048)
