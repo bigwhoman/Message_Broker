@@ -47,40 +47,9 @@ services:
     ports:
       - "12346:8080"
 
-  slave-1:
-    container_name: slave-1
-    build:
-     context: .
-     dockerfile: Dockerfile.slave
-    networks:
-      - backend
-    depends_on:
-      primary-lb:
-        condition: service_healthy
-    environment:
-      LOAD_BALANCER_PRIMARY_HOST: "primary-lb"
-      LOAD_BALANCER_PRIMARY_PORT: "12345"
-      LOAD_BALANCER_BACKUP_HOST: "secondary-lb"
-      LOAD_BALANCER_BACKUP_PORT: "12345"
-
-  slave-2:
-    container_name: slave-2
-    build:
-     context: .
-     dockerfile: Dockerfile.slave
-    networks:
-      - backend
-    depends_on:
-      primary-lb:
-        condition: service_healthy
-    environment:
-      LOAD_BALANCER_PRIMARY_HOST: "primary-lb"
-      LOAD_BALANCER_PRIMARY_PORT: "12345"
-      LOAD_BALANCER_BACKUP_HOST: "secondary-lb"
-      LOAD_BALANCER_BACKUP_PORT: "12345"
-
-  slave-3:
-    container_name: slave-3
+  slave:
+    deploy:
+      replicas: 2
     build:
      context: .
      dockerfile: Dockerfile.slave

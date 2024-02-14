@@ -12,7 +12,7 @@ for data in "${TO_PUSH1[@]}"; do
 done
 # Kill a slave
 echo "Slave..."
-docker compose stop slave-1
+docker compose stop vbox-slave-1
 sleep 5
 # Connect to secondry and push again
 for data in "${TO_PUSH2[@]}"; do
